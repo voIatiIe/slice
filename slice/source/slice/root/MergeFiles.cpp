@@ -1,3 +1,9 @@
+#include <cstdlib>
+#include <vector>
+#include <iostream>
+#include <map>
+#include <string>
+
 #include "TFile.h"
 #include "TH1.h"
 #include "TTree.h"
@@ -6,6 +12,8 @@
 #include "TROOT.h"
 #include "TError.h"
 #include <TLorentzVector.h>
+
+#include "ConfigReader.h"
 
 using namespace std;
 
@@ -21,28 +29,39 @@ int merge_files(string type, vector<string> &filenames) {
     TH1D *hist_SL4 = new TH1D("hist_SL4", "hist_SL4", Nbins, MinValue, MaxValue);
     TH1D *hist_SL5 = new TH1D("hist_SL5", "hist_SL5", Nbins, MinValue, MaxValue);
 
-
     double weight;
     double ph_pt, ph_phi, ph_eta;
     double jet_lead_pt, jet_lead_eta, jet_lead_phi, jet_lead_E;
     double metTST_pt, metTST_phi, metTSTsignif;
-    double ph_iso_et40, ph_iso_et20, ph_iso_pt, ph_isem, ph_z_point;
-    UInt_t n_ph, n_jet, n_mu, n_e_looseBL;
+    double ph_iso_et40, ph_iso_et20, ph_iso_pt, ph_z_point;
+    UInt_t n_ph, n_jet, n_mu, n_e_looseBL, ph_isem;
+
+    double sum_of_weights_bk_xAOD, koef, sumw_MC16 = 0;
 
     TLorentzVector met, ph, jet;
 
     for(int i = 0; i < filenames.size(); i++) {
+        char *ftempname = filenames[i].data();
+        cout << "[" << type << "] " << filenames[i] << endl;
 
-        char ftempname[150]{};
-        sprintf( ftempname, "%s", filenames[i] );
         TFile *file = new TFile(ftempname, "READ");
-
-        cout << "[" << type << "] " << ftempname << endl;
-
         TTree *tree = (TTree*)file->Get("output_tree");
 
-        if (type != "data")
+        if (type != "data") {
             tree->SetBranchAddress("weight",&weight);
+            TTree *tree_MC_sw = (TTree*)file->Get("output_tree_sw");
+            TTree *tree_norm = (TTree*)file->Get("norm_tree");
+
+            tree_norm->SetBranchAddress("koef",&koef);
+            tree_MC_sw->SetBranchAddress("sum_of_weights_bk_xAOD",&sum_of_weights_bk_xAOD);
+
+            for (long i = 0; i < tree_MC_sw->GetEntries(); i++) {
+                tree_MC_sw->GetEntry(i);
+                sumw_MC16a += sum_of_weights_bk_xAOD;
+            }
+
+            tree_norm->GetEntry(i);
+        }
 
         tree->SetBranchAddress("ph_pt",&ph_pt);
         tree->SetBranchAddress("ph_phi",&ph_phi);

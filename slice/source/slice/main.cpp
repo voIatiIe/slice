@@ -4,7 +4,6 @@
 #include <map>
 #include <string>
 
-#include "ConfigReader.h"
 #include "MergeFiles.h"
 #include "SourceFiles.h"
 

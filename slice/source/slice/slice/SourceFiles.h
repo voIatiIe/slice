@@ -1,6 +1,15 @@
 #include <vector>
 #include <string>
 
+#include "TFile.h"
+#include "TH1.h"
+#include "TTree.h"
+#include "TString.h"
+#include "TSystem.h"
+#include "TROOT.h"
+#include "TError.h"
+#include <TLorentzVector.h>
+
 using namespace std;
 
 
@@ -9,12 +18,12 @@ Double_t lumi_mc16d = 44307.4;
 Double_t lumi_mc16e = 58450.1;
 
 
-vector<string> data_filenames = {
+static vector<string> data_filenames = {
     "/home/katet/Programs/ZnunugammaInclusive/NewDataSamples/data15-18.reproc-30-09-21_full_checked.root"
 };
 
 
-vector<string> signal_filenames = {
+static vector<string> signal_filenames = {
     "/home/katet/Programs/ZnunugammaInclusive/NewDataSamples/user.akurova.MxAOD_Znunugamma2jEWK_MC16a_361290.root",
     "/home/katet/Programs/ZnunugammaInclusive/NewDataSamples/user.akurova.MxAOD_Znunugamma2jEWK_MC16d_361290.root",
     "/home/katet/Programs/ZnunugammaInclusive/NewDataSamples/user.akurova.MxAOD_Znunugamma2jEWK_MC16e_361290.root",
@@ -27,7 +36,7 @@ vector<string> signal_filenames = {
 };
 
 
-vector<string> background_filenames = {
+static vector<string> background_filenames = {
     "/home/katet/Programs/ZnunugammaInclusive/NewDataSamples/user.akurova.MxAOD_Gammajet_MC16a_361045.root",
     "/home/katet/Programs/ZnunugammaInclusive/NewDataSamples/user.akurova.MxAOD_Gammajet_MC16a_361046.root",
     "/home/katet/Programs/ZnunugammaInclusive/NewDataSamples/user.akurova.MxAOD_Gammajet_MC16a_361047.root",
@@ -101,6 +110,6 @@ vector<string> background_filenames = {
 };
 
 
-vector<string> etogam_filenames = {
+static vector<string> etogam_filenames = {
     "/home/katet/Programs/TRExFitter/etogamDD2015-18_reproc-30-09-21.root",
 };
