@@ -23,7 +23,7 @@ Double_t lumi_mc16d = 44307.4;
 Double_t lumi_mc16e = 58450.1;
 
 
-int merge_files(string type, vector<string> &filenames) {
+int merge_files(string type, vector<string> &filenames, TH1D *histograms) {
     ConfigReader config = ConfigReader("/home/katet/Programs/ZGamSliceMethod/slice/slice/config.cfg");
 
     double NBins = config.getInt("NBins");
@@ -161,6 +161,8 @@ int merge_files(string type, vector<string> &filenames) {
                 if(new_ftempname.Contains("MC16a")) event_weight = lumi_mc16a*koef*weight/(sumw_MC16);
                 if(new_ftempname.Contains("MC16d")) event_weight = lumi_mc16d*koef*weight/(sumw_MC16);
                 if(new_ftempname.Contains("MC16e")) event_weight = lumi_mc16e*koef*weight/(sumw_MC16);
+                if (type == "bkg")
+                    if (new_ftempname.Contains("Gammajet")) event_weight *= 0.66;
             }
 
             if (type == "etogam") hist_SL->Fill(var, event_weight);
@@ -210,29 +212,35 @@ int merge_files(string type, vector<string> &filenames) {
         cout<<"N_SL4 = "<<N_SL4<<" +- "<<err_SL4<<endl;
     }
 
-    TH1D *histos[5] = {hist_SL, hist_SL1, hist_SL2, hist_SL3, hist_SL4};
+    histograms[0] = hist_SL;
+    histograms[1] = hist_SL1;
+    histograms[2] = hist_SL2;
+    histograms[3] = hist_SL3;
+    histograms[4] = hist_SL4;
 
     for (int i = 0; i < 5; i++) {
-        double lastBin = histos[i]->GetBinContent(NBins) + histos[i]->GetBinContent(NBins+1);
-        double lastBinErr = sqrt(pow(histos[i]->GetBinError(NBins),2) + pow(histos[i]->GetBinError(NBins+1),2));
-        histos[i]->SetBinContent(NBins, lastBin);
-        histos[i]->SetBinError(NBins, lastBinErr);
+        double lastBin = histograms[i]->GetBinContent(NBins) + histograms[i]->GetBinContent(NBins+1);
+        double lastBinErr = sqrt(pow(histograms[i]->GetBinError(NBins),2) + pow(histograms[i]->GetBinError(NBins+1),2));
+        histograms[i]->SetBinContent(NBins, lastBin);
+        histograms[i]->SetBinError(NBins, lastBinErr);
 
-        histos[i]->SetBinContent(NBins+1, 0);
-        histos[i]->SetBinError(NBins+1, 0);
+        histograms[i]->SetBinContent(NBins+1, 0);
+        histograms[i]->SetBinError(NBins+1, 0);
     }
 
-    stringstream fOutName;
-    fOutName << "/home/katet/Programs/ZGamSliceMethod/" << type << ".root";
-    TFile *fOut = new TFile(fOutName.str().data(), "RECREATE");
+    if (config.getString("Region") == "CR_iso") {
+        stringstream fOutName;
+        fOutName << "/home/katet/Programs/ZGamSliceMethod/" << type << ".root";
+        TFile *fOut = new TFile(fOutName.str().data(), "RECREATE");
 
-    for (int i = 1; i < 5; i++) {
-        stringstream histname;
-        histname << "hist_SL" << i;
-        hist_SL->SetName(histname.str().data());
-        hist_SL->Write();
+        for (int i = 1; i < 5; i++) {
+            stringstream histname;
+            histname << "hist_SL" << i;
+            hist_SL->SetName(histname.str().data());
+            hist_SL->Write();
+        }
+        fOut->Close();
     }
-    fOut->Close();
 
     return 0;
 }
