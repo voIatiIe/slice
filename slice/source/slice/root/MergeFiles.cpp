@@ -26,14 +26,14 @@ Double_t lumi_mc16e = 58450.1;
 int merge_files(string type, vector<string> &filenames) {
     ConfigReader config = ConfigReader("/home/katet/Programs/ZGamSliceMethod/slice/slice/config.cfg");
 
-    double Nbins = config.getInt("NBins");
+    double NBins = config.getInt("NBins");
     double MinValue = config.getDouble("MinValue"), MaxValue = config.getDouble("MaxValue");
 
-    TH1D *hist_SL = new TH1D("hist_SL", "hist_SL", Nbins, MinValue, MaxValue);
-    TH1D *hist_SL1 = new TH1D("hist_SL1", "hist_SL1", Nbins, MinValue, MaxValue);
-    TH1D *hist_SL2 = new TH1D("hist_SL2", "hist_SL2", Nbins, MinValue, MaxValue);
-    TH1D *hist_SL3 = new TH1D("hist_SL3", "hist_SL3", Nbins, MinValue, MaxValue);
-    TH1D *hist_SL4 = new TH1D("hist_SL4", "hist_SL4", Nbins, MinValue, MaxValue);
+    TH1D *hist_SL = new TH1D("hist_SL", "hist_SL", NBins, MinValue, MaxValue);
+    TH1D *hist_SL1 = new TH1D("hist_SL1", "hist_SL1", NBins, MinValue, MaxValue);
+    TH1D *hist_SL2 = new TH1D("hist_SL2", "hist_SL2", NBins, MinValue, MaxValue);
+    TH1D *hist_SL3 = new TH1D("hist_SL3", "hist_SL3", NBins, MinValue, MaxValue);
+    TH1D *hist_SL4 = new TH1D("hist_SL4", "hist_SL4", NBins, MinValue, MaxValue);
 
     double weight;
     double ph_pt, ph_phi, ph_eta;
@@ -59,9 +59,11 @@ int merge_files(string type, vector<string> &filenames) {
         cout << "[" << type << "] " << filenames[i] << endl;
 
         TFile *file = new TFile(ftempname, "READ");
-        TTree *tree = (TTree*)file->Get("output_tree");
+        TTree *tree = (TTree*)file->Get((type == "etogam") ? "etogam" : "output_tree");
 
-        if (type != "data") {
+        if (type == "etogam") tree->SetBranchAddress("weight",&weight);
+
+        else if (type != "data") {
             tree->SetBranchAddress("weight",&weight);
             TTree *tree_MC_sw = (TTree*)file->Get("output_tree_sw");
             TTree *tree_norm = (TTree*)file->Get("norm_tree");
@@ -91,11 +93,13 @@ int merge_files(string type, vector<string> &filenames) {
         tree->SetBranchAddress("metTST_phi", &metTST_phi);
         tree->SetBranchAddress("metTSTsignif", &metTSTsignif);
 
-        tree->SetBranchAddress("ph_iso_et40", &ph_iso_et40);
-        tree->SetBranchAddress("ph_iso_et20", &ph_iso_et20);
-        tree->SetBranchAddress("ph_iso_pt", &ph_iso_pt);
-        tree->SetBranchAddress("ph_isem", &ph_isem);
-        tree->SetBranchAddress("ph_z_point", &ph_z_point);
+        if (type != "etogam") {
+            tree->SetBranchAddress("ph_iso_et40", &ph_iso_et40);
+            tree->SetBranchAddress("ph_iso_et20", &ph_iso_et20);
+            tree->SetBranchAddress("ph_iso_pt", &ph_iso_pt);
+            tree->SetBranchAddress("ph_isem", &ph_isem);
+            tree->SetBranchAddress("ph_z_point", &ph_z_point);
+        }
 
         tree->SetBranchAddress("n_ph", &n_ph);
         tree->SetBranchAddress("n_jet", &n_jet);
@@ -104,25 +108,31 @@ int merge_files(string type, vector<string> &filenames) {
 
         for(long i = 0; i < tree->GetEntries(); i++){
             tree->GetEntry(i);
+            
+            double TrackIsoVar, IsoVar;
 
-            double IsoVar = ph_iso_et20/ph_pt;
-            double TrackIsoVar = ph_iso_pt/ph_pt;
-
+            if (type != "etogam") {
+                IsoVar = ph_iso_et20/ph_pt;
+                TrackIsoVar = ph_iso_pt/ph_pt;
+            }
+            
             met.SetPtEtaPhiM(metTST_pt,0,metTST_phi,0);
             ph.SetPtEtaPhiE(ph_pt,ph_eta,ph_phi,ph_iso_et40);
             jet.SetPtEtaPhiE(jet_lead_pt,jet_lead_eta,jet_lead_phi,jet_lead_E);
 
             if(fabs(weight)>=100) continue;
-            if(fabs(ph_z_point)>=250) continue;
             if(ph_pt <= 150) continue;
             if(n_ph !=1 || n_mu !=0 || n_e_looseBL != 0) continue;
-            if(ph_isem != 0) continue;
 
+            if (type != "etogam") {
+                if(fabs(ph_z_point)>=250) continue;
+                if(ph_isem != 0) continue;
+            }
 
             if (config.getString("Variable") == "DeltaPhiMetJet") {
                 if(n_jet < 1) continue;
             }
-            
+
             if (config.getString("Region") == "CR_iso" || config.getString("Region") == "CR_noniso") {
                 if(
                     metTST_pt >= config.getDouble("MetTSTPt") && 
@@ -138,36 +148,38 @@ int merge_files(string type, vector<string> &filenames) {
                 if(n_jet >= 1 && fabs(met.DeltaPhi(jet)) <= config.getDouble("DeltaPhiMetJet")) continue;
             }
 
-            map<string, int> variables{
-                {"DeltaPhiMetJet", fabs(met.DeltaPhi(jet))}, 
-                {"DeltaPhiMetPh", fabs(met.DeltaPhi(ph))}, 
-                {"MetTSTPt", metTST_pt},
-                {"MetTSTSignif", metTSTsignif},
-            };
-
-            double var = variables[config.getString("Variable")];
+            double var;
+            if(config.getString("Variable") == "DeltaPhiMetJet") var = fabs(met.DeltaPhi(jet));
+            if(config.getString("Variable") == "DeltaPhiMetPh") var = fabs(met.DeltaPhi(ph));
+            if(config.getString("Variable") == "MetTSTPt") var = metTST_pt;
+            if(config.getString("Variable") == "MetTSTSignif") var = metTSTsignif;
 
 
             double event_weight = 1.0;
-            if (type != "data") {
+            if (type == "etogam") event_weight = weight;
+            else if (type != "data") {
                 if(new_ftempname.Contains("MC16a")) event_weight = lumi_mc16a*koef*weight/(sumw_MC16);
                 if(new_ftempname.Contains("MC16d")) event_weight = lumi_mc16d*koef*weight/(sumw_MC16);
                 if(new_ftempname.Contains("MC16e")) event_weight = lumi_mc16e*koef*weight/(sumw_MC16);
             }
 
-            if (config.getString("Region") == "CR_iso") {
-                if(IsoVar < 0.065 && TrackIsoVar < 0.05) {
-                    hist_SL->Fill(var, event_weight);
-                }
-            }
-            else if (config.getString("Region") == "CR_noniso" || config.getString("Region") == "SR_noniso") {
-                if (TrackIsoVar <= 0.05) continue;
+            if (type == "etogam") hist_SL->Fill(var, event_weight);
 
-                if (IsoVar > SL1 && IsoVar < SL2) hist_SL1->Fill(var, event_weight);
-                else if (IsoVar > SL2 && IsoVar < SL3) hist_SL2->Fill(var, event_weight);
-                else if (IsoVar > SL3 && IsoVar < SL4) hist_SL3->Fill(var, event_weight);
-                else if (IsoVar > SL4 && IsoVar < SL5) hist_SL4->Fill(var, event_weight);
-            }            
+            else {
+                if (config.getString("Region") == "CR_iso") {
+                    if(IsoVar < 0.065 && TrackIsoVar < 0.05) {
+                        hist_SL->Fill(var, event_weight);
+                    }
+                }
+                else if (config.getString("Region") == "CR_noniso" || config.getString("Region") == "SR_noniso") {
+                    if (TrackIsoVar <= 0.05) continue;
+
+                    if (IsoVar > SL1 && IsoVar < SL2) hist_SL1->Fill(var, event_weight);
+                    else if (IsoVar > SL2 && IsoVar < SL3) hist_SL2->Fill(var, event_weight);
+                    else if (IsoVar > SL3 && IsoVar < SL4) hist_SL3->Fill(var, event_weight);
+                    else if (IsoVar > SL4 && IsoVar < SL5) hist_SL4->Fill(var, event_weight);
+                }
+            }        
         }
         file->Close();
     }
@@ -175,14 +187,22 @@ int merge_files(string type, vector<string> &filenames) {
     Double_t err_SL, err_SL1, err_SL2, err_SL3, err_SL4;
 
     if (config.getString("Region") == "CR_iso") {
-        double N_SL = hist_SL->IntegralAndError(1, Nbins, err_SL, "");
+        if (type == "etogam") hist_SL -> Scale(config.getDouble("EtogamSL")/hist_SL->Integral());
+        double N_SL = hist_SL->IntegralAndError(1, NBins, err_SL, "");
         cout<<"N_SL = "<<N_SL<<" +- "<<err_SL<<endl;
     }
     else if (config.getString("Region") == "CR_noniso" || config.getString("Region") == "SR_noniso") {
-        double N_SL1 = hist_SL1->IntegralAndError(1, Nbins, err_SL1, "");
-        double N_SL2 = hist_SL2->IntegralAndError(1, Nbins, err_SL2, "");
-        double N_SL3 = hist_SL3->IntegralAndError(1, Nbins, err_SL3, "");
-        double N_SL4 = hist_SL4->IntegralAndError(1, Nbins, err_SL4, "");
+        if (type == "etogam") {
+            hist_SL1 -> Scale(config.getDouble("EtogamSL1")/hist_SL1->Integral());
+            hist_SL2 -> Scale(config.getDouble("EtogamSL2")/hist_SL2->Integral());
+            hist_SL3 -> Scale(config.getDouble("EtogamSL3")/hist_SL3->Integral());
+            hist_SL4 -> Scale(config.getDouble("EtogamSL4")/hist_SL4->Integral());
+        }
+
+        double N_SL1 = hist_SL1->IntegralAndError(1, NBins, err_SL1, "");
+        double N_SL2 = hist_SL2->IntegralAndError(1, NBins, err_SL2, "");
+        double N_SL3 = hist_SL3->IntegralAndError(1, NBins, err_SL3, "");
+        double N_SL4 = hist_SL4->IntegralAndError(1, NBins, err_SL4, "");
 
         cout<<"N_SL1 = "<<N_SL1<<" +- "<<err_SL1<<endl;
         cout<<"N_SL2 = "<<N_SL2<<" +- "<<err_SL2<<endl;
@@ -193,13 +213,13 @@ int merge_files(string type, vector<string> &filenames) {
     TH1D histos[5] = {hist_SL, hist_SL1, hist_SL2, hist_SL3, hist_SL4};
 
     for (int i = 0; i < 5; i++) {
-        double lastBin = histos[i].GetBinContent(NBins) + histos[i].GetBinContent(NBins+1);
-        double lastBinErr = sqrt(pow(histos[i].GetBinError(NBins),2) + pow(histos[i].GetBinError(NBins+1),2));
-        histos[i].SetBinContent(NBins, lastBin);
-        histos[i].SetBinError(NBins, lastBinErr);
+        double lastBin = histos[i]->GetBinContent(NBins) + histos[i]->GetBinContent(NBins+1);
+        double lastBinErr = sqrt(pow(histos[i]->GetBinError(NBins),2) + pow(histos[i]->GetBinError(NBins+1),2));
+        histos[i]->SetBinContent(NBins, lastBin);
+        histos[i]->SetBinError(NBins, lastBinErr);
 
-        histos[i].SetBinContent(NBins+1, 0);
-        histos[i].SetBinError(NBins+1, 0);
+        histos[i]->SetBinContent(NBins+1, 0);
+        histos[i]->SetBinError(NBins+1, 0);
     }
 
     stringstream fOutName;
@@ -212,6 +232,7 @@ int merge_files(string type, vector<string> &filenames) {
         hist_SL->SetName(histname.str().data());
         hist_SL->Write();
     }
+    fOut->Close();
 
     return 0;
 }

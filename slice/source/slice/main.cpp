@@ -14,4 +14,5 @@ int main() {
     merge_files("data", data_filenames);
     merge_files("signal", signal_filenames);
     merge_files("bkg", background_filenames);
+    merge_files("etogam", etogam_filenames);
 }
