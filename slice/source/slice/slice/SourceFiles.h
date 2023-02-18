@@ -24,12 +24,12 @@ static vector<string> signal_filenames = {
     "/home/katet/Programs/ZnunugammaInclusive/NewDataSamples/user.akurova.MxAOD_Znunugamma2jEWK_MC16a_361290.root",
     "/home/katet/Programs/ZnunugammaInclusive/NewDataSamples/user.akurova.MxAOD_Znunugamma2jEWK_MC16d_361290.root",
     "/home/katet/Programs/ZnunugammaInclusive/NewDataSamples/user.akurova.MxAOD_Znunugamma2jEWK_MC16e_361290.root",
-    "/home/katet/Programs/ZnunugammaInclusive/NewDataSamples/user.akurova.MxAOD_Znunugamma2jQCD_MC16a_364519.root",
-    "/home/katet/Programs/ZnunugammaInclusive/NewDataSamples/user.akurova.MxAOD_Znunugamma2jQCD_MC16d_364519.root",
-    "/home/katet/Programs/ZnunugammaInclusive/NewDataSamples/user.akurova.MxAOD_Znunugamma2jQCD_MC16e_364519.root",
-    // "/home/katet/Programs/ZnunugammaInclusive/NewDataSamples/user.akurova.MxAOD_Znunugamma2jQCD_MC16a_345784.root",
-    // "/home/katet/Programs/ZnunugammaInclusive/NewDataSamples/user.akurova.MxAOD_Znunugamma2jQCD_MC16d_345784.root",
-    // "/home/katet/Programs/ZnunugammaInclusive/NewDataSamples/user.akurova.MxAOD_Znunugamma2jQCD_MC16e_345784.root",
+    // "/home/katet/Programs/ZnunugammaInclusive/NewDataSamples/user.akurova.MxAOD_Znunugamma2jQCD_MC16a_364519.root",
+    // "/home/katet/Programs/ZnunugammaInclusive/NewDataSamples/user.akurova.MxAOD_Znunugamma2jQCD_MC16d_364519.root",
+    // "/home/katet/Programs/ZnunugammaInclusive/NewDataSamples/user.akurova.MxAOD_Znunugamma2jQCD_MC16e_364519.root",
+    "/home/katet/Programs/ZnunugammaInclusive/NewDataSamples/user.akurova.MxAOD_Znunugamma2jQCD_MC16a_345784.root",
+    "/home/katet/Programs/ZnunugammaInclusive/NewDataSamples/user.akurova.MxAOD_Znunugamma2jQCD_MC16d_345784.root",
+    "/home/katet/Programs/ZnunugammaInclusive/NewDataSamples/user.akurova.MxAOD_Znunugamma2jQCD_MC16e_345784.root",
 };
 
 

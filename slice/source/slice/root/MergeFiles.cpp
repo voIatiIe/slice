@@ -210,7 +210,7 @@ int merge_files(string type, vector<string> &filenames) {
         cout<<"N_SL4 = "<<N_SL4<<" +- "<<err_SL4<<endl;
     }
 
-    TH1D histos[5] = {hist_SL, hist_SL1, hist_SL2, hist_SL3, hist_SL4};
+    TH1D *histos[5] = {hist_SL, hist_SL1, hist_SL2, hist_SL3, hist_SL4};
 
     for (int i = 0; i < 5; i++) {
         double lastBin = histos[i]->GetBinContent(NBins) + histos[i]->GetBinContent(NBins+1);
