@@ -23,11 +23,7 @@ int merge_files(string type, vector<string> &filenames) {
 
     double Nbins = 150, MinValue = 0, MaxValue = 3.15;
 
-    TH1D *hist_SL1 = new TH1D("hist_SL1", "hist_SL1", Nbins, MinValue, MaxValue);
-    TH1D *hist_SL2 = new TH1D("hist_SL2", "hist_SL2", Nbins, MinValue, MaxValue);
-    TH1D *hist_SL3 = new TH1D("hist_SL3", "hist_SL3", Nbins, MinValue, MaxValue);
-    TH1D *hist_SL4 = new TH1D("hist_SL4", "hist_SL4", Nbins, MinValue, MaxValue);
-    TH1D *hist_SL5 = new TH1D("hist_SL5", "hist_SL5", Nbins, MinValue, MaxValue);
+    TH1D *hist_SL = new TH1D("hist_SL1", "hist_SL1", Nbins, MinValue, MaxValue);
 
     double weight;
     double ph_pt, ph_phi, ph_eta;
@@ -42,6 +38,8 @@ int merge_files(string type, vector<string> &filenames) {
 
     for(int i = 0; i < filenames.size(); i++) {
         char *ftempname = filenames[i].data();
+        TString new_ftempname = TString(ftempname);
+
         cout << "[" << type << "] " << filenames[i] << endl;
 
         TFile *file = new TFile(ftempname, "READ");
@@ -57,7 +55,7 @@ int merge_files(string type, vector<string> &filenames) {
 
             for (long i = 0; i < tree_MC_sw->GetEntries(); i++) {
                 tree_MC_sw->GetEntry(i);
-                sumw_MC16a += sum_of_weights_bk_xAOD;
+                sumw_MC16 += sum_of_weights_bk_xAOD;
             }
 
             tree_norm->GetEntry(i);
@@ -91,12 +89,55 @@ int merge_files(string type, vector<string> &filenames) {
             tree->GetEntry(i);
 
             double IsoVar = ph_iso_et20/ph_pt;
+            double TrackIsoVar = ph_iso_pt/ph_pt;
 
             met.SetPtEtaPhiM(metTST_pt,0,metTST_phi,0);
             ph.SetPtEtaPhiE(ph_pt,ph_eta,ph_phi,ph_iso_et40);
             jet.SetPtEtaPhiE(jet_lead_pt,jet_lead_eta,jet_lead_phi,jet_lead_E);
 
+            if(fabs(weight)>=100) continue;
+            if(fabs(ph_z_point)>=250) continue;
+            if(ph_pt <= 150) continue;
+            if(n_ph !=1 || n_mu !=0 || n_e_medium != 0) continue;
+            if(ph_isem != 0) continue;
+
+
+            if (config.getString("Variable") == "DeltaPhiMetJet") {
+                if(n_jet < 1) continue;
+            }
+            
+            if (config.getString("Region") == "CR") {
+                if(
+                    metTST_pt >= 130 && 
+                    metTSTsignif >= 8 && 
+                    !(n_jet >= 1 && fabs(met.DeltaPhi(jet)) <= 0.4) && 
+                    fabs(met.DeltaPhi(ph)) >= 0.7
+                ) continue;
+            }
+            else if (config.getString("Region") == "SR") {
+                if(fabs(met.DeltaPhi(ph)) <= 0.7) continue;
+                if(metTST_pt <= 130) continue;
+                if(metTSTsignif <= 11) continue;
+                if(n_jet >= 1 && fabs(met.DeltaPhi(jet)) <= 0.4 ) continue;
+            }
+
+            map<string, int> variables{
+                {"DeltaPhiMetJet", fabs(met.DeltaPhi(jet))}, 
+                {"DeltaPhiMetPh", fabs(met.DeltaPhi(ph))}, 
+                {"MetTSTPt", metTST_pt},
+                {"MetTSTSignif", metTSTsignif},
+            };
+
+            double var = variables[config.getString("Variable")];
+            if(IsoVar < 0.065 && TrackIsoVar < 0.05) {
+                hist_SL->Fill(var, 1.0);
+            }
         }
+
+        Double_t err_SL;
+
+        double N_SL = hist_SL->IntegralAndError(1, Nbins, err_SL, "");
+        cout<<"N_SL = "<<N_SL<<" +- "<<err_SL<<endl;
     }
 
     return 0;
