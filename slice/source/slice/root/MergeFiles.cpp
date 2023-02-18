@@ -108,14 +108,14 @@ int merge_files(string type, vector<string> &filenames, TH1D *histograms) {
 
         for(long i = 0; i < tree->GetEntries(); i++){
             tree->GetEntry(i);
-            
+
             double TrackIsoVar, IsoVar;
 
             if (type != "etogam") {
                 IsoVar = ph_iso_et20/ph_pt;
                 TrackIsoVar = ph_iso_pt/ph_pt;
             }
-            
+
             met.SetPtEtaPhiM(metTST_pt,0,metTST_phi,0);
             ph.SetPtEtaPhiE(ph_pt,ph_eta,ph_phi,ph_iso_et40);
             jet.SetPtEtaPhiE(jet_lead_pt,jet_lead_eta,jet_lead_phi,jet_lead_E);
@@ -135,9 +135,9 @@ int merge_files(string type, vector<string> &filenames, TH1D *histograms) {
 
             if (config.getString("Region") == "CR_iso" || config.getString("Region") == "CR_noniso") {
                 if(
-                    metTST_pt >= config.getDouble("MetTSTPt") && 
-                    metTSTsignif >= config.getDouble("MetTSTSignif") && 
-                    !(n_jet >= 1 && fabs(met.DeltaPhi(jet)) <= config.getDouble("DeltaPhiMetJet")) && 
+                    metTST_pt >= config.getDouble("MetTSTPt") &&
+                    metTSTsignif >= config.getDouble("MetTSTSignif") &&
+                    !(n_jet >= 1 && fabs(met.DeltaPhi(jet)) <= config.getDouble("DeltaPhiMetJet")) &&
                     fabs(met.DeltaPhi(ph)) >= config.getDouble("DeltaPhiMetPh")
                 ) continue;
             }
@@ -165,8 +165,13 @@ int merge_files(string type, vector<string> &filenames, TH1D *histograms) {
                     if (new_ftempname.Contains("Gammajet")) event_weight *= 0.66;
             }
 
-            if (type == "etogam") hist_SL->Fill(var, event_weight);
-
+            if (type == "etogam") {
+              hist_SL->Fill(var, event_weight);
+              hist_SL1->Fill(var, event_weight);
+              hist_SL2->Fill(var, event_weight);
+              hist_SL3->Fill(var, event_weight);
+              hist_SL4->Fill(var, event_weight);
+            }
             else {
                 if (config.getString("Region") == "CR_iso") {
                     if(IsoVar < 0.065 && TrackIsoVar < 0.05) {
@@ -181,7 +186,7 @@ int merge_files(string type, vector<string> &filenames, TH1D *histograms) {
                     else if (IsoVar > SL3 && IsoVar < SL4) hist_SL3->Fill(var, event_weight);
                     else if (IsoVar > SL4 && IsoVar < SL5) hist_SL4->Fill(var, event_weight);
                 }
-            }        
+            }
         }
         file->Close();
     }
@@ -212,20 +217,20 @@ int merge_files(string type, vector<string> &filenames, TH1D *histograms) {
         cout<<"N_SL4 = "<<N_SL4<<" +- "<<err_SL4<<endl;
     }
 
-    histograms[0] = hist_SL;
-    histograms[1] = hist_SL1;
-    histograms[2] = hist_SL2;
-    histograms[3] = hist_SL3;
-    histograms[4] = hist_SL4;
+    histograms[0] = *hist_SL;
+    histograms[1] = *hist_SL1;
+    histograms[2] = *hist_SL2;
+    histograms[3] = *hist_SL3;
+    histograms[4] = *hist_SL4;
 
     for (int i = 0; i < 5; i++) {
-        double lastBin = histograms[i]->GetBinContent(NBins) + histograms[i]->GetBinContent(NBins+1);
-        double lastBinErr = sqrt(pow(histograms[i]->GetBinError(NBins),2) + pow(histograms[i]->GetBinError(NBins+1),2));
-        histograms[i]->SetBinContent(NBins, lastBin);
-        histograms[i]->SetBinError(NBins, lastBinErr);
+        double lastBin = histograms[i].GetBinContent(NBins) + histograms[i].GetBinContent(NBins+1);
+        double lastBinErr = sqrt(pow(histograms[i].GetBinError(NBins),2) + pow(histograms[i].GetBinError(NBins+1),2));
+        histograms[i].SetBinContent(NBins, lastBin);
+        histograms[i].SetBinError(NBins, lastBinErr);
 
-        histograms[i]->SetBinContent(NBins+1, 0);
-        histograms[i]->SetBinError(NBins+1, 0);
+        histograms[i].SetBinContent(NBins+1, 0);
+        histograms[i].SetBinError(NBins+1, 0);
     }
 
     if (config.getString("Region") == "CR_iso") {
