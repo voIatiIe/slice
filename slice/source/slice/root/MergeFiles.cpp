@@ -19,11 +19,16 @@ using namespace std;
 
 
 int merge_files(string type, vector<string> &filenames) {
-    ConfigReader config = ConfigReader("/workenv/slice/slice/config.cfg");
+    ConfigReader config = ConfigReader("/home/katet/Programs/ZGamSliceMethod/slice/slice/config.cfg");
 
-    double Nbins = 150, MinValue = 0, MaxValue = 3.15;
+    double Nbins = config.getInt("NBins");
+    double MinValue = config.getDouble("MinValue"), MaxValue = config.getDouble("MaxValue");
 
-    TH1D *hist_SL = new TH1D("hist_SL1", "hist_SL1", Nbins, MinValue, MaxValue);
+    TH1D *hist_SL = new TH1D("hist_SL", "hist_SL", Nbins, MinValue, MaxValue);
+    TH1D *hist_SL1 = new TH1D("hist_SL1", "hist_SL1", Nbins, MinValue, MaxValue);
+    TH1D *hist_SL2 = new TH1D("hist_SL2", "hist_SL2", Nbins, MinValue, MaxValue);
+    TH1D *hist_SL3 = new TH1D("hist_SL3", "hist_SL3", Nbins, MinValue, MaxValue);
+    TH1D *hist_SL4 = new TH1D("hist_SL4", "hist_SL4", Nbins, MinValue, MaxValue);
 
     double weight;
     double ph_pt, ph_phi, ph_eta;
@@ -98,7 +103,7 @@ int merge_files(string type, vector<string> &filenames) {
             if(fabs(weight)>=100) continue;
             if(fabs(ph_z_point)>=250) continue;
             if(ph_pt <= 150) continue;
-            if(n_ph !=1 || n_mu !=0 || n_e_medium != 0) continue;
+            if(n_ph !=1 || n_mu !=0 || n_e_looseBL != 0) continue;
             if(ph_isem != 0) continue;
 
 
@@ -106,19 +111,19 @@ int merge_files(string type, vector<string> &filenames) {
                 if(n_jet < 1) continue;
             }
             
-            if (config.getString("Region") == "CR") {
+            if (config.getString("Region") == "CR_iso" || config.getString("Region") == "CR_noniso") {
                 if(
-                    metTST_pt >= 130 && 
-                    metTSTsignif >= 8 && 
-                    !(n_jet >= 1 && fabs(met.DeltaPhi(jet)) <= 0.4) && 
-                    fabs(met.DeltaPhi(ph)) >= 0.7
+                    metTST_pt >= config.getDouble("MetTSTPt") && 
+                    metTSTsignif >= config.getDouble("MetTSTSignif") && 
+                    !(n_jet >= 1 && fabs(met.DeltaPhi(jet)) <= config.getDouble("DeltaPhiMetJet")) && 
+                    fabs(met.DeltaPhi(ph)) >= config.getDouble("DeltaPhiMetPh")
                 ) continue;
             }
-            else if (config.getString("Region") == "SR") {
-                if(fabs(met.DeltaPhi(ph)) <= 0.7) continue;
-                if(metTST_pt <= 130) continue;
-                if(metTSTsignif <= 11) continue;
-                if(n_jet >= 1 && fabs(met.DeltaPhi(jet)) <= 0.4 ) continue;
+            else if (config.getString("Region") == "SR_noniso") {
+                if(fabs(met.DeltaPhi(ph)) <= config.getDouble("DeltaPhiMetPh")) continue;
+                if(metTST_pt <= config.getDouble("MetTSTPt")) continue;
+                if(metTSTsignif <= config.getDouble("MetTSTSignif")) continue;
+                if(n_jet >= 1 && fabs(met.DeltaPhi(jet)) <= config.getDouble("DeltaPhiMetJet")) continue;
             }
 
             map<string, int> variables{
@@ -129,15 +134,47 @@ int merge_files(string type, vector<string> &filenames) {
             };
 
             double var = variables[config.getString("Variable")];
-            if(IsoVar < 0.065 && TrackIsoVar < 0.05) {
-                hist_SL->Fill(var, 1.0);
+
+
+            double event_weight = 1.0;
+            if (type != "data") {
+                if(new_ftempname.Contains("MC16a")) event_weight = lumi_mc16a*koef*weight/(sumw_MC16);
+                if(new_ftempname.Contains("MC16d")) event_weight = lumi_mc16d*koef*weight/(sumw_MC16);
+                if(new_ftempname.Contains("MC16e")) event_weight = lumi_mc16e*koef*weight/(sumw_MC16);
             }
+
+            if (config.getString("Region") == "CR_iso") {
+                if(IsoVar < 0.065 && TrackIsoVar < 0.05) {
+                    hist_SL->Fill(var, event_weight);
+                }
+            }
+            else if (config.getString("Region") == "CR_noniso" || config.getString("Region") == "SR_noniso") {
+                if (TrackIsoVar <= 0.05) continue;
+
+                if (IsoVar > 0.065 && IsoVar < 0.08) hist_SL1->Fill(var, event_weight);
+                else if (IsoVar > 0.08 && IsoVar < 0.1) hist_SL2->Fill(var, event_weight);
+                else if (IsoVar > 0.1 && IsoVar < 0.2) hist_SL3->Fill(var, event_weight);
+                else if (IsoVar > 0.2 && IsoVar < 0.3) hist_SL4->Fill(var, event_weight);
+            }            
         }
+    }
 
-        Double_t err_SL;
+    Double_t err_SL, err_SL1, err_SL2, err_SL3, err_SL4;
 
+    if (config.getString("Region") == "CR_iso") {
         double N_SL = hist_SL->IntegralAndError(1, Nbins, err_SL, "");
         cout<<"N_SL = "<<N_SL<<" +- "<<err_SL<<endl;
+    }
+    else if (config.getString("Region") == "CR_noniso" || config.getString("Region") == "SR_noniso") {
+        double N_SL1 = hist_SL1->IntegralAndError(1, Nbins, err_SL1, "");
+        double N_SL2 = hist_SL2->IntegralAndError(1, Nbins, err_SL2, "");
+        double N_SL3 = hist_SL3->IntegralAndError(1, Nbins, err_SL3, "");
+        double N_SL4 = hist_SL4->IntegralAndError(1, Nbins, err_SL4, "");
+
+        cout<<"N_SL1 = "<<N_SL1<<" +- "<<err_SL1<<endl;
+        cout<<"N_SL2 = "<<N_SL2<<" +- "<<err_SL2<<endl;
+        cout<<"N_SL3 = "<<N_SL3<<" +- "<<err_SL3<<endl;
+        cout<<"N_SL4 = "<<N_SL4<<" +- "<<err_SL4<<endl;
     }
 
     return 0;
