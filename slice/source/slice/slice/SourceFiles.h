@@ -1,3 +1,5 @@
+#pragma once
+
 #include <vector>
 #include <string>
 
@@ -11,11 +13,6 @@
 #include <TLorentzVector.h>
 
 using namespace std;
-
-
-Double_t lumi_mc16a = 36214.96;
-Double_t lumi_mc16d = 44307.4;
-Double_t lumi_mc16e = 58450.1;
 
 
 static vector<string> data_filenames = {

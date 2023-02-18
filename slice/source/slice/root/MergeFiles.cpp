@@ -3,6 +3,7 @@
 #include <iostream>
 #include <map>
 #include <string>
+#include <sstream>
 
 #include "TFile.h"
 #include "TH1.h"
@@ -16,6 +17,10 @@
 #include "ConfigReader.h"
 
 using namespace std;
+
+Double_t lumi_mc16a = 36214.96;
+Double_t lumi_mc16d = 44307.4;
+Double_t lumi_mc16e = 58450.1;
 
 
 int merge_files(string type, vector<string> &filenames) {
@@ -41,6 +46,12 @@ int merge_files(string type, vector<string> &filenames) {
 
     TLorentzVector met, ph, jet;
 
+    double SL1 = config.getDouble("SL1");
+    double SL2 = config.getDouble("SL2");
+    double SL3 = config.getDouble("SL3");
+    double SL4 = config.getDouble("SL4");
+    double SL5 = config.getDouble("SL5");
+
     for(int i = 0; i < filenames.size(); i++) {
         char *ftempname = filenames[i].data();
         TString new_ftempname = TString(ftempname);
@@ -58,12 +69,13 @@ int merge_files(string type, vector<string> &filenames) {
             tree_norm->SetBranchAddress("koef",&koef);
             tree_MC_sw->SetBranchAddress("sum_of_weights_bk_xAOD",&sum_of_weights_bk_xAOD);
 
+            sumw_MC16 = 0;
             for (long i = 0; i < tree_MC_sw->GetEntries(); i++) {
                 tree_MC_sw->GetEntry(i);
                 sumw_MC16 += sum_of_weights_bk_xAOD;
             }
 
-            tree_norm->GetEntry(i);
+            tree_norm->GetEntry(0);
         }
 
         tree->SetBranchAddress("ph_pt",&ph_pt);
@@ -151,12 +163,13 @@ int merge_files(string type, vector<string> &filenames) {
             else if (config.getString("Region") == "CR_noniso" || config.getString("Region") == "SR_noniso") {
                 if (TrackIsoVar <= 0.05) continue;
 
-                if (IsoVar > 0.065 && IsoVar < 0.08) hist_SL1->Fill(var, event_weight);
-                else if (IsoVar > 0.08 && IsoVar < 0.1) hist_SL2->Fill(var, event_weight);
-                else if (IsoVar > 0.1 && IsoVar < 0.2) hist_SL3->Fill(var, event_weight);
-                else if (IsoVar > 0.2 && IsoVar < 0.3) hist_SL4->Fill(var, event_weight);
+                if (IsoVar > SL1 && IsoVar < SL2) hist_SL1->Fill(var, event_weight);
+                else if (IsoVar > SL2 && IsoVar < SL3) hist_SL2->Fill(var, event_weight);
+                else if (IsoVar > SL3 && IsoVar < SL4) hist_SL3->Fill(var, event_weight);
+                else if (IsoVar > SL4 && IsoVar < SL5) hist_SL4->Fill(var, event_weight);
             }            
         }
+        file->Close();
     }
 
     Double_t err_SL, err_SL1, err_SL2, err_SL3, err_SL4;
@@ -175,6 +188,29 @@ int merge_files(string type, vector<string> &filenames) {
         cout<<"N_SL2 = "<<N_SL2<<" +- "<<err_SL2<<endl;
         cout<<"N_SL3 = "<<N_SL3<<" +- "<<err_SL3<<endl;
         cout<<"N_SL4 = "<<N_SL4<<" +- "<<err_SL4<<endl;
+    }
+
+    TH1D histos[5] = {hist_SL, hist_SL1, hist_SL2, hist_SL3, hist_SL4};
+
+    for (int i = 0; i < 5; i++) {
+        double lastBin = histos[i].GetBinContent(NBins) + histos[i].GetBinContent(NBins+1);
+        double lastBinErr = sqrt(pow(histos[i].GetBinError(NBins),2) + pow(histos[i].GetBinError(NBins+1),2));
+        histos[i].SetBinContent(NBins, lastBin);
+        histos[i].SetBinError(NBins, lastBinErr);
+
+        histos[i].SetBinContent(NBins+1, 0);
+        histos[i].SetBinError(NBins+1, 0);
+    }
+
+    stringstream fOutName;
+    fOutName << "/home/katet/Programs/ZGamSliceMethod/" << type << ".root";
+    TFile *fOut = new TFile(fOutName.str().data(), "RECREATE");
+
+    for (int i = 1; i < 5; i++) {
+        stringstream histname;
+        histname << "hist_SL" << i;
+        hist_SL->SetName(histname.str().data());
+        hist_SL->Write();
     }
 
     return 0;
